@@ -206,8 +206,8 @@ class TLaunchPadPro():
 
 
 	def OnMidiMsg(self, event):
-		#print('\n\nOnMidiMsg func')
-		# print (event.status, event.data1, event.data2)
+		print('\n\nOnMidiMsg func')
+		print (event.status, event.data1, event.data2)
 		ColT = (0x000000, 0x2F0018 | LPBlink2)
 
 		if event.midiChan > 0:
@@ -315,7 +315,7 @@ class TLaunchPadPro():
 
 
 		if event.midiId == midi.MIDI_CHANAFTERTOUCH:
-			#print('\nOnMidiMsg - midiId == midi.MIDI_CHANAFTERTOUCH')
+			print('\nOnMidiMsg - midiId == midi.MIDI_CHANAFTERTOUCH')
 			event.midiId = midi.MIDI_CONTROLCHANGE
 			event.status = event.status & 0x0F | event.midiId
 			event.inEv = event.data1
@@ -335,7 +335,7 @@ class TLaunchPadPro():
 
 
 		elif event.midiId == midi.MIDI_KEYAFTERTOUCH:
-			#print('\nOnMidiMsg - else midiId == midi.MIDI_KEYAFTERTOUCH')
+			print('\nOnMidiMsg - else midiId == midi.MIDI_KEYAFTERTOUCH')
 			event.midiId = midi.MIDI_CONTROLCHANGE
 			event.status = event.status & 0x0F | event.midiId
 
@@ -349,7 +349,9 @@ class TLaunchPadPro():
 
 			if self.ClipOfs < -1:
 				x2 = y * LayW + x # get the custom page item index
-				if (x2 < 0) | (x2 > High(LaunchMapPages[-self.ClipOfs - 2].Items)):
+				print('B4 HIGH')
+				# print(x2,' :HIGH--->', launchMapPages.length(), '-----', launchMapPages.getMapCount(-self.ClipOfs - 2))
+				if (x2 < 0) | (x2 > launchMapPages.getMapCount(-self.ClipOfs - 2)):
 					return	
 
 				if launchMapPages.getMapItemAftertouch(-self.ClipOfs - 2, x2) < 0: # no aftertouch CC defined, default behavior
@@ -1241,32 +1243,32 @@ def OnMidiIn(event):
 	data = event.data1
 	# print('presssed w event:',dir(event))
 	# print('presssed w data1:', data, '  -->', hex(data))
-	# if data  == Btn_Up:
-	# 	print('presssed Btn_Up')
-	# elif data == Btn_Down:
-		#print('presssed Btn_Down')
-	# elif data == Btn_Left:
-		#print('presssed Btn_Left')
-	# elif data == Btn_Right:
-		#print('presssed Btn_Right')
-	# elif data == Btn_Session:
-		#print('presssed Btn_Session')
-	# elif data == Btn_Note:
-		#print('presssed Btn_Note')
-	# elif data == Btn_Custom:
-		#print('presssed Btn_Custom')
-	# elif data == Btn_CapMidi:
-		#print('presssed Btn_CapMidi')
-	# elif data == Btn_SpareHex:
-		#print('presssed Btn_SpareHex')
-	# elif data == Btn_Volume:
-		#print('presssed Btn_Volume')
-	# elif data == Btn_Pan:
-		#print('presssed Btn_Pan')
-	# elif data == Btn_SendA:
-		#print('presssed Btn_Btn_SendA')
-	# elif data == Btn_SendB:
-		#print('presssed Btn_SendB')
+	if data  == Btn_Up:
+		print('presssed Btn_Up')
+	elif data == Btn_Down:
+		print('presssed Btn_Down')
+	elif data == Btn_Left:
+		print('presssed Btn_Left')
+	elif data == Btn_Right:
+		print('presssed Btn_Right')
+	elif data == Btn_Session:
+		print('presssed Btn_Session')
+	elif data == Btn_Note:
+		print('presssed Btn_Note')
+	elif data == Btn_Custom:
+		print('presssed Btn_Custom')
+	elif data == Btn_CapMidi:
+		print('presssed Btn_CapMidi')
+	elif data == Btn_SpareHex:
+		print('presssed Btn_SpareHex')
+	elif data == Btn_Volume:
+		print('presssed Btn_Volume')
+	elif data == Btn_Pan:
+		print('presssed Btn_Pan')
+	elif data == Btn_SendA:
+		print('presssed Btn_Btn_SendA')
+	elif data == Btn_SendB:
+		print('presssed Btn_SendB')
 	# elif data == Btn_StopClip:
 	# 	transport.start()
 		# event.handled = True
