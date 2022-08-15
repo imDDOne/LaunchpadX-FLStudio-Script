@@ -1,4 +1,4 @@
-# name=Novation Launchpad X
+# name=Novation Launchpad X v2
 # Version 1.0
 import patterns
 import mixer
@@ -413,27 +413,27 @@ class TLaunchPadPro():
 
 					o = int(event.data2 > 0) * 2
 					if n == Btn_Play:
-						#print('OnMidiMsg - SESSION n == Btn_Play')
-						#transport.globalTransport(midi.FPT_Play, o, event.pmeFlags)
+						print('OnMidiMsg - SESSION n == Btn_Play')
+						transport.globalTransport(midi.FPT_Play, o, event.pmeFlags)
 						device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x02, 0x00, 0x00, 0xF7]))
 						device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0xF7]))
 					elif n == Btn_Stop:
-						#print('OnMidiMsg - SESSION n == Btn_Stop')
+						print('OnMidiMsg - SESSION n == Btn_Stop')
 						transport.globalTransport(midi.FPT_Stop, o, event.pmeFlags)
 					elif n == Btn_TapTempo:
-						#print('OnMidiMsg - SESSION n == Btn_TapTempo')
+						print('OnMidiMsg - SESSION n == Btn_TapTempo')
 						transport.globalTransport(midi.FPT_TapTempo, o, event.pmeFlags)
 					elif n == Btn_TempoNudgePlus:
-						#print('OnMidiMsg - SESSION n == Btn_TempoNudgePlus')
+						print('OnMidiMsg - SESSION n == Btn_TempoNudgePlus')
 						transport.globalTransport(midi.FPT_NudgePlus, o, event.pmeFlags)
 					elif n == Btn_TempoNudgeMin:
-						#print('OnMidiMsg - SESSION n == Btn_TempoNudgeMin')
+						print('OnMidiMsg - SESSION n == Btn_TempoNudgeMin')
 						transport.globalTransport(midi.FPT_NudgeMinus, o, event.pmeFlags)
-					if (m > 0) | (m2 <= 1):
-						#print('OnMidiMsg - SESSION 03 (m > 0) | (m2 <= 1)')
+					if (m > 0) | (m2 <= 1): # SESSION BUTTIN
+						print('OnMidiMsg - SESSION 03 (m > 0) | (m2 <= 1)')
 						self.SetBtn(n, m)
 					if (n == 2) & (self.ClipOfs < -1) & (event.data2 > 0):
-						#print('OnMidiMsg - SESSION 04 (n == 2) & (self.ClipOfs < -1) & (event.data2 > 0)')
+						print('OnMidiMsg - SESSION 04 (n == 2) & (self.ClipOfs < -1) & (event.data2 > 0)')
 						launchMapPages.releaseMapItem(event, -self.ClipOfs - 2)
 					return
 
@@ -1018,7 +1018,7 @@ class TLaunchPadPro():
 
 	def OnInit(self):
 		#print('\n\nOnInit func')
-		NameStr = 'Novation Launchpad X'
+		NameStr = 'Novation Launchpad X v2'
 
 		for n in range(0, len(self.ColScaleT)):
 			v = n / 255
@@ -1203,7 +1203,10 @@ class TLaunchPadPro():
 LaunchPadPro = TLaunchPadPro()
 
 def OnInit():
-	#print('initoo')
+	print('initoo B4')
+	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0x02, 0x00, 0x00, 0xF7]))
+	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0xF7]))
+	print('initoo AFT')
 	LaunchPadPro.OnInit()
 
 def OnDeInit():
@@ -1211,11 +1214,69 @@ def OnDeInit():
 	LaunchPadPro.OnDeInit()
 
 def OnMidiMsg(event):
-	#print('midi in msg')
+	print('midi in msg')
+	data = event.data1
+	# print('presssed w event:',dir(event))
+	# print('presssed w data1:', data, '  -->', hex(data))
+	if data  == Btn_Up:
+		print('OnMidiMsg presssed Btn_Up')
+	elif data == Btn_Down:
+		print('OnMidiMsg presssed Btn_Down')
+	elif data == Btn_Left:
+		print('OnMidiMsg presssed Btn_Left')
+	elif data == Btn_Right:
+		print('OnMidiMsg presssed Btn_Right')
+	elif data == Btn_Session:
+		print('OnMidiMsg presssed Btn_Session')
+	elif data == Btn_Note:
+		print('OnMidiMsg presssed Btn_Note')
+	elif data == Btn_Custom:
+		print('OnMidiMsg presssed Btn_Custom')
+	elif data == Btn_CapMidi:
+		print('OnMidiMsg presssed Btn_CapMidi')
+	elif data == Btn_SpareHex:
+		print('OnMidiMsg presssed Btn_SpareHex')
+	elif data == Btn_Volume:
+		print('OnMidiMsg presssed Btn_Volume')
+	elif data == Btn_Pan:
+		print('OnMidiMsg presssed Btn_Pan')
+	elif data == Btn_SendA:
+		print('OnMidiMsg presssed Btn_Btn_SendA')
+	elif data == Btn_SendB:
+		print('OnMidiMsg presssed Btn_SendB')
 	LaunchPadPro.OnMidiMsg(event)
 
 def OnMidiOutMsg(event):
-	#print('midi o msg')
+	print('midi o msg')
+	data = event.data1
+	# print('presssed w event:',dir(event))
+	# print('presssed w data1:', data, '  -->', hex(data))
+	if data  == Btn_Up:
+		print('OnMidiOutMsg presssed Btn_Up')
+	elif data == Btn_Down:
+		print('OnMidiOutMsg presssed Btn_Down')
+	elif data == Btn_Left:
+		print('OnMidiOutMsg presssed Btn_Left')
+	elif data == Btn_Right:
+		print('OnMidiOutMsg presssed Btn_Right')
+	elif data == Btn_Session:
+		print('OnMidiOutMsg presssed Btn_Session')
+	elif data == Btn_Note:
+		print('OnMidiOutMsg presssed Btn_Note')
+	elif data == Btn_Custom:
+		print('OnMidiOutMsg presssed Btn_Custom')
+	elif data == Btn_CapMidi:
+		print('OnMidiOutMsg presssed Btn_CapMidi')
+	elif data == Btn_SpareHex:
+		print('OnMidiOutMsg presssed Btn_SpareHex')
+	elif data == Btn_Volume:
+		print('OnMidiOutMsg presssed Btn_Volume')
+	elif data == Btn_Pan:
+		print('OnMidiOutMsg presssed Btn_Pan')
+	elif data == Btn_SendA:
+		print('OnMidiOutMsg presssed Btn_Btn_SendA')
+	elif data == Btn_SendB:
+		print('OnMidiOutMsg presssed Btn_SendB')
 	LaunchPadPro.OnMidiOutMsg(event)
 
 def OnDoFullRefresh():
@@ -1239,7 +1300,7 @@ def OnUpdateLiveMode(LastTrackNum):
 	LaunchPadPro.OnUpdateLiveMode(LastTrackNum)
 
 def OnMidiIn(event):
-	#print('\n\nBEGIN-----')
+	print('\n\nBEGIN-----')
 	data = event.data1
 	# print('presssed w event:',dir(event))
 	# print('presssed w data1:', data, '  -->', hex(data))
@@ -1316,7 +1377,36 @@ def OnMidiIn(event):
 
 
 def OnSysEx(event):
-	#print('syeEX')
+	print('syeEX')
+	data = event.data1
+	# print('presssed w event:',dir(event))
+	# print('presssed w data1:', data, '  -->', hex(data))
+	if data  == Btn_Up:
+		print('OnSysEx presssed Btn_Up')
+	elif data == Btn_Down:
+		print('OnSysEx presssed Btn_Down')
+	elif data == Btn_Left:
+		print('OnSysEx presssed Btn_Left')
+	elif data == Btn_Right:
+		print('OnSysEx presssed Btn_Right')
+	elif data == Btn_Session:
+		print('OnSysEx presssed Btn_Session')
+	elif data == Btn_Note:
+		print('OnSysEx presssed Btn_Note')
+	elif data == Btn_Custom:
+		print('OnSysEx presssed Btn_Custom')
+	elif data == Btn_CapMidi:
+		print('OnSysEx presssed Btn_CapMidi')
+	elif data == Btn_SpareHex:
+		print('OnSysEx presssed Btn_SpareHex')
+	elif data == Btn_Volume:
+		print('OnSysEx presssed Btn_Volume')
+	elif data == Btn_Pan:
+		print('OnSysEx presssed Btn_Pan')
+	elif data == Btn_SendA:
+		print('OnSysEx presssed Btn_Btn_SendA')
+	elif data == Btn_SendB:
+		print('OnSysEx presssed Btn_SendB')
 	LaunchPadPro.OnSysEx(event)
 
 
