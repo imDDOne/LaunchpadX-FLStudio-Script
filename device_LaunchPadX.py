@@ -13,6 +13,7 @@ import midi
 import utils
 import math
 import time
+import lpx
 
 MaxInt = 2147483647
 PadsW = 10
@@ -113,7 +114,7 @@ BlinkColT = ((0x280102, 0x3F3F3F), (0x100002, 0x18002F), (0x100100, 0x181000), (
 
 
 
-class TLaunchPadPro():
+class TLaunchPadX():
 	def __init__(self):
 		self.Shift = False
 		self.ClipOfs = 0
@@ -757,7 +758,7 @@ class TLaunchPadPro():
 
 
 	def OnDoFullRefresh(self):
-		# #print('\n\nOnDoFullRefresh func')
+		# print('\n\nOnDoFullRefresh func')
 		TempBtnMap = [[0 for x in range(PadsW)] for y in range(PadsH + 1)]
 		TempAnimBtnMap = [[0 for x in range(PadsW)] for y in range(PadsH + 1)]
 
@@ -1032,9 +1033,17 @@ class TLaunchPadPro():
 					launchMapPages.setMapItemTarget(-1, y * LayW + x, y * PadsStride + x + 1)
 
 		if device.isAssigned():
-			device.midiOutSysex(bytes([0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]))
-			# set programmer mode
-			device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x0E, 0x01, 0xF7]))
+			# device.midiOutSysex(bytes([0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]))
+			# # set programmer mode
+			# device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x0E, 0x01, 0xF7]))
+
+			# set DAW MODE
+			device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0xF7]))
+			device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0x02, 0x00, 0x00, 0xF7]))
+
+			# device.midiOutSysex(bytes([0x90, 0x62, 0x05]))
+			# device.midiOutSysex(bytes([0x90, 0x58, 0x4D]))
+
 			# switch off all LEDs
 			self.SwitchLedsOff()
 			self.CurLayout = 3
@@ -1124,7 +1133,11 @@ class TLaunchPadPro():
 							v = 0x010000
 						else:
 							v = self.FixColor(v)
-						self.BtnMap[SClipsY + y - 1][SClipsX + x] = v
+							
+						xx = SClipsX + x
+						yy = SClipsY + y - 1
+						print(xx,'<------>', yy)
+						self.BtnMap[yy][xx] = v
 
 
 					Ofs = self.TrackOfs
@@ -1200,18 +1213,19 @@ class TLaunchPadPro():
 
 
 
-LaunchPadPro = TLaunchPadPro()
+LaunchPadX = TLaunchPadX()
 
 def OnInit():
 	print('initoo B4')
-	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0x02, 0x00, 0x00, 0xF7]))
-	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0xF7]))
+	# Enable DAW mode
+	# device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0x02, 0x00, 0x00, 0xF7]))
+	# device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x10, 0xF7]))
 	print('initoo AFT')
-	LaunchPadPro.OnInit()
+	LaunchPadX.OnInit()
 
 def OnDeInit():
 	#print('deinitoo')
-	LaunchPadPro.OnDeInit()
+	LaunchPadX.OnDeInit()
 
 def OnMidiMsg(event):
 	print('midi in msg')
@@ -1233,6 +1247,9 @@ def OnMidiMsg(event):
 	elif data == Btn_Custom:
 		print('OnMidiMsg presssed Btn_Custom')
 	elif data == Btn_CapMidi:
+		o = int(event.data2 > 0) * 2
+		transport.globalTransport(midi.FPT_Record, o, event.pmeFlags)
+		event.handled = True
 		print('OnMidiMsg presssed Btn_CapMidi')
 	elif data == Btn_SpareHex:
 		print('OnMidiMsg presssed Btn_SpareHex')
@@ -1244,7 +1261,7 @@ def OnMidiMsg(event):
 		print('OnMidiMsg presssed Btn_Btn_SendA')
 	elif data == Btn_SendB:
 		print('OnMidiMsg presssed Btn_SendB')
-	LaunchPadPro.OnMidiMsg(event)
+	LaunchPadX.OnMidiMsg(event)
 
 def OnMidiOutMsg(event):
 	print('midi o msg')
@@ -1277,27 +1294,27 @@ def OnMidiOutMsg(event):
 		print('OnMidiOutMsg presssed Btn_Btn_SendA')
 	elif data == Btn_SendB:
 		print('OnMidiOutMsg presssed Btn_SendB')
-	LaunchPadPro.OnMidiOutMsg(event)
+	LaunchPadX.OnMidiOutMsg(event)
 
 def OnDoFullRefresh():
 	# #print('full refr')
-	LaunchPadPro.OnDoFullRefresh()
+	LaunchPadX.OnDoFullRefresh()
 
 def OnDisplayZone():
 	#print('displ zon')
-	LaunchPadPro.OnDisplayZone()
+	LaunchPadX.OnDisplayZone()
 
 def OnIdle():
 	# #print('idle')
-	LaunchPadPro.OnIdle()
+	LaunchPadX.OnIdle()
 
 def OnRefresh(Flags):
 	#print('refr')
-	LaunchPadPro.OnRefresh(Flags)
+	LaunchPadX.OnRefresh(Flags)
 
 def OnUpdateLiveMode(LastTrackNum):
 	#print('up  live')
-	LaunchPadPro.OnUpdateLiveMode(LastTrackNum)
+	LaunchPadX.OnUpdateLiveMode(LastTrackNum)
 
 def OnMidiIn(event):
 	print('\n\nBEGIN-----')
@@ -1372,7 +1389,7 @@ def OnMidiIn(event):
 	# #print('velocity:',event.velocity)
 	# #print('write:',event.write)
 	
-	LaunchPadPro.OnMidiIn(event)
+	LaunchPadX.OnMidiIn(event)
 	#print('END-----\n')
 
 
@@ -1407,7 +1424,7 @@ def OnSysEx(event):
 		print('OnSysEx presssed Btn_Btn_SendA')
 	elif data == Btn_SendB:
 		print('OnSysEx presssed Btn_SendB')
-	LaunchPadPro.OnSysEx(event)
+	LaunchPadX.OnSysEx(event)
 
 
 
