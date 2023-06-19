@@ -13,7 +13,7 @@ import midi
 import utils
 import math
 import time
-import lpx
+import lpx_tools
 
 MaxInt = 2147483647
 grid_width = 10
@@ -92,6 +92,7 @@ LPBlink3 = 3 << LPBlinkShift
 LPBlink4 = 4 << LPBlinkShift
 LPBlinkMask = 0xFF << LPBlinkShift
 
+lpx = lpx_tools.LPX()
 
 
 class TBtnInfo():
@@ -140,6 +141,7 @@ class TLaunchPadX():
 		self.BeatPos = 0
 		self.BlinkLight = 2
 		self.CurLayout = 0
+		self.CurSession = ''
 
 		self.BtnMapMode = 0 #animation
 		self.BtnMapModeRefCount = 0
@@ -153,8 +155,11 @@ class TLaunchPadX():
 		self.LeftBtnColumnToggle = False
 
 
-		self.is_mixer_enabled = False
+		self.is_mixerMode_enabled = False
+		self.is_performance_mode = False
+		self.is_sessionMode_active = False
 		self.start_time = 0
+		
 
 
 	def ResetBtnLastClip(self):
@@ -207,26 +212,27 @@ class TLaunchPadX():
 
 
 	def SetOfs(self, SetTrackOfs, SetClipOfs):
-		#print('\n\nSetOfs func')
+		print('\n\nSetOfs func:',SetTrackOfs)
 		Col1 = 0x010900
 		Col2 = 0x090100
 
 
 		self.TrackOfs = utils.Limited(SetTrackOfs, 0, playlist.trackCount() - grid_height)
 		self.ClipOfs = utils.Limited(SetClipOfs, -launchMapPages.length() - 1, 0x10000)
+		print(SetTrackOfs, playlist.trackCount() - grid_height,'-----------------TrackOfs:', self.TrackOfs, '  -----------ClipOfs:',self.ClipOfs)
 		if device.isAssigned():
-			# page buttons
-			o = self.TrackOfs + 4
-			v = utils.Limited(o, 0, 256)
-			self.BtnMap[1][0] = utils.FadeColor(Col2, Col1, v)
-			self.BtnMap[2][0] = utils.FadeColor(Col1, Col2, v)
+		# 	# page buttons
+		# 	o = self.TrackOfs + 4
+		# 	v = utils.Limited(o, 0, 256)
+		# 	self.BtnMap[1][0] = utils.FadeColor(Col2, Col1, v)
+		# 	self.BtnMap[2][0] = utils.FadeColor(Col1, Col2, v)
 
-			o = abs(self.ClipOfs) * 4
-			if self.ClipOfs < 0:
-				o = o * 4
-			v = utils.Limited(o, 0, 256)
-			self.BtnMap[0][1] = utils.FadeColor(Col2, Col1, v)
-			self.BtnMap[0][2] = utils.FadeColor(Col1, Col2, v)
+		# 	o = abs(self.ClipOfs) * 4
+		# 	if self.ClipOfs < 0:
+		# 		o = o * 4
+		# 	v = utils.Limited(o, 0, 256)
+		# 	self.BtnMap[0][1] = utils.FadeColor(Col2, Col1, v)
+		# 	self.BtnMap[0][2] = utils.FadeColor(Col1, Col2, v)
 
 			if self.ClipOfs < -1:
 				launchMapPages.updateMap(-self.ClipOfs - 2)
@@ -260,8 +266,8 @@ class TLaunchPadX():
 		if Index > Btn_Overview:
 			if Index == Btn_Spare:
 				if Value > 0:
-					utils.SwapInt(self.TrackOfs, self.TrackOfs_Spare)
-					utils.SwapInt(self.ClipOfs, self.ClipOfs_Spare)
+					# utils.SwapInt(self.TrackOfs, self.TrackOfs_Spare)
+					# utils.SwapInt(self.ClipOfs, self.ClipOfs_Spare)
 					self.SetOfs(self.TrackOfs, self.ClipOfs)
 
 				self.SetBtn(Btn_Overview, Value)
@@ -317,13 +323,13 @@ class TLaunchPadX():
 		if event.status == midi.MIDI_BEGINSYSEX:
 			# print ('midi in sysex', len(event.sysex), event.sysex[0], event.sysex[1], event.sysex[2], event.sysex[3], event.sysex[4], event.sysex[5], event.sysex[6], event.sysex[7], event.sysex[8], event.sysex[9]) #, event.sysex[10], event.sysex[11], event.sysex[12], event.sysex[13], event.sysex[14], event.sysex[15], event.sysex[16])
 			#layout change
-			print('-------layout b4 change:',event.sysex)
-			if (len(event.sysex) == 11) & (event.sysex[5] == 0x0C):
-				print('-------layout aft change:',event.sysex[7])
+			print(len(event.sysex),'...and..',event.sysex[5], event.sysex[7],'-------layout BEFORE change:',event.sysex)
+			if (len(event.sysex) == 9) & (event.sysex[5] == 0x0C):
+				print('-------layout AFTER change:',event.sysex[7])
 				self.CurLayout = event.sysex[7]
 			event.handled = True
 		else:
-			#print('onmidiin else')
+			# print('onmidiin else')
 			event.handled = False
 
 
@@ -352,21 +358,38 @@ class TLaunchPadX():
 			elif data == Btn_Right:
 				print('OnMidiMsg presssed Btn_Right')
 			elif data == Btn_Session:
-				print('IS MIXER ENABLED:',self.is_mixer_enabled)
-				if self.is_mixer_enabled is True:
-					print('move to session')
-					device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x14, 0x59, 0x01, 0xF7]))
-					device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x00, 0xF7]))
-					self.is_mixer_enabled = False
+				if self.is_sessionMode_active is True:
+					lpx.toggle_session(self.is_performance_mode)
+					print('+++toggled')
 				else:
-					print('move to mixer')
-					device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x14, 0x0C, 0x01, 0xF7]))
-					device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x0D, 0xF7]))
-					self.is_mixer_enabled = True
+					lpx.recall_last_session()
+					print('back to last session')
+				self.is_sessionMode_active = True
+
+
+
+				# print('IS MIXER ENABLED:',self.is_mixerMode_enabled)
+				# if self.is_mixerMode_enabled is True:
+				# 	print('move to session')
+				# 	# channge session color to green and then enabled it
+				# 	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x14, 0x59, 0x01, 0xF7]))
+				# 	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x00, 0xF7]))
+				# 	self.is_mixerMode_enabled = False
+				# 	self.CurSession = lpx_tools.Layout.SESSION_LAYOUT.value.PAGES
+				# else:
+				# 	print('move to mixer')
+				# 	# channge session color to orange and then enabled it
+				# 	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x14, 0x0C, 0x01, 0xF7]))
+				# 	device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x0D, 0xF7]))
+				# 	self.is_mixerMode_enabled = True
+				# 	self.CurSession = lpx_tools.Layout.SESSION_LAYOUT.value.MIXER
 				event.handled = True
 				print('OnMidiMsg presssed Btn_Session')
 			elif data == Btn_Note:
 				print('OnMidiMsg presssed Btn_Note')
+				self.is_sessionMode_active = False
+				self.CurSession = lpx_tools.Layout.NOTE_LAYOUT
+				print('SESSION::::', self.CurSession)
 			elif data == Btn_Custom:
 				print('OnMidiMsg presssed Btn_Custom')
 			elif data == Btn_CapMidi:
@@ -467,20 +490,21 @@ class TLaunchPadX():
 				m = a * 2 - 1
 				
 				if BlockPages:
-					#print('OnMidiMsg - track BlockPages')
+					print('++++++ - track BlockPages')
 					m = m * OverH
+				print('call it UD')
 				self.SetOfs(self.TrackOfs + m, self.ClipOfs)
-				self.BtnT[Btn_Overview] = int(self.BtnT[Btn_Overview] > 0) * 2 # so that session btn works as held
+				# self.BtnT[Btn_Overview] = int(self.BtnT[Btn_Overview] > 0) * 2 # so that session btn works as held
 				
 				# if self.ClipOfs >= 0:
 				# 	#print('OnMidiMsg - track self.ClipOfs >= 0')
 				# 	self.ClipOfsPerfomance = self.ClipOfs
 				# self.TrackOfsPerfomance = self.TrackOfs
-			self.ArrowT[a] = event.data2
+			# self.ArrowT[a] = event.data2
 
 			print('self.ClipOfsPerfomance:', self.ClipOfsPerfomance,'__self.PrevClipOfs:', self.PrevClipOfs,' __self.ClipOfs:',self.ClipOfs)
-			self.CheckSpecialSwitches()
-			playlist.lockDisplayZone(1 + a, event.data2 >= 0)
+			# self.CheckSpecialSwitches()
+			# playlist.lockDisplayZone(1 + a, event.data2 >= 0)
 			
 			return
 
@@ -513,6 +537,7 @@ class TLaunchPadX():
 				else:
 					print('OnMidiMsg - clip self.ClipOfs < 0:',self.ClipOfs)
 					o = self.ClipOfs + m
+				print('call it LR')
 				self.SetOfs(self.TrackOfs, o)
 				self.BtnT[Btn_Overview] = int(self.BtnT[Btn_Overview] > 0) * 2 # so that session btn works as held
 				self.TrackOfsPerfomance = self.TrackOfs
@@ -745,7 +770,7 @@ class TLaunchPadX():
 	def OnDisplayZone(self):
 		print('\n\nOnDisplayZone func')
 		if (self.ClipOfs >= 0) & (playlist.getDisplayZone() != 0):
-			playlist.liveDisplayZone(self.ClipOfs, self.TrackOfs + 1, self.ClipOfs + grid_width - 1, self.TrackOfs + 1 + grid_height)
+			playlist.liveDisplayZone(self.ClipOfs, self.TrackOfs + 1, self.ClipOfs + grid_width - 1, self.TrackOfs + 1 + grid_height, 1000)
 		else:
 			playlist.liveDisplayZone(-1, -1, -1, -1)
 
@@ -843,7 +868,7 @@ class TLaunchPadX():
 			print('---INIT w aft page:',self.CurLayout)
 
 		# load mapping
-		launchMapPages.init(NameStr, LayW, LayH)
+		# launchMapPages.init(NameStr, LayW, LayH)
 
 		self.Reset()
 		device.createRefreshThread()
@@ -882,30 +907,30 @@ class TLaunchPadX():
 
 		if device.isAssigned():
 			if (self.ClipOfs >= -1) | (self.BtnT[Btn_Overview] > 0):
-				if self.BtnT[Btn_Overview] > 0:
-					# overview
-					R2.Left = self.ClipOfs
-					if R2.Left < 0:
-						R2.Left -= 128
-					R2.Right = R2.Left + SClipsW - 1
-					R2.Top = 1 + self.TrackOfs
-					R2.Bottom = R2.Top + SClipsH - 1
-					for y in range(0, OverH + 1):
-						for x in range(0, OverW + 1):
-							v = OverviewColT[0][0]
-							if (x < OverW) & (y < OverH):
-								R.Left = x * SClipsW
-								R.Right = R.Left + SClipsW - 1
-								R.Top = 1 + y * SClipsH
-								R.Bottom = R.Top + SClipsH - 1
-								o = patterns.getBlockSetStatus(R.Left, R.Top, R.Right, R.Bottom)
-								v = OverviewColT[utils.RectOverlapEqual(R, R2)][o]
-							elif (x == SClipsW) & (y < SClipsH):
-								v = OverviewColT[y == (-1 - self.ClipOfs)][int(y <= launchMapPages.length())]
-							elif (y == SClipsH) & (x < SClipsW):
-								v = OverviewColT[x + 8 == (-1 - self.ClipOfs)][int(x + 8 <= launchMapPages.length())]
-							self.BtnMap[OverY + y][OverX + x] = v
-				else:
+				# if self.BtnT[Btn_Overview] > 0:
+				# 	# overview
+				# 	R2.Left = self.ClipOfs
+				# 	if R2.Left < 0:
+				# 		R2.Left -= 128
+				# 	R2.Right = R2.Left + SClipsW - 1
+				# 	R2.Top = 1 + self.TrackOfs
+				# 	R2.Bottom = R2.Top + SClipsH - 1
+				# 	for y in range(0, OverH + 1):
+				# 		for x in range(0, OverW + 1):
+				# 			v = OverviewColT[0][0]
+				# 			if (x < OverW) & (y < OverH):
+				# 				R.Left = x * SClipsW
+				# 				R.Right = R.Left + SClipsW - 1
+				# 				R.Top = 1 + y * SClipsH
+				# 				R.Bottom = R.Top + SClipsH - 1
+				# 				o = patterns.getBlockSetStatus(R.Left, R.Top, R.Right, R.Bottom)
+				# 				v = OverviewColT[utils.RectOverlapEqual(R, R2)][o]
+				# 			elif (x == SClipsW) & (y < SClipsH):
+				# 				v = OverviewColT[y == (-1 - self.ClipOfs)][int(y <= launchMapPages.length())]
+				# 			elif (y == SClipsH) & (x < SClipsW):
+				# 				v = OverviewColT[x + 8 == (-1 - self.ClipOfs)][int(x + 8 <= launchMapPages.length())]
+				# 			self.BtnMap[OverY + y][OverX + x] = v
+				# else:
 					# scene buttons
 					y = SClipsH + 1
 					for x in range(0, ClipsW):
@@ -1005,7 +1030,7 @@ def OnMidiIn(event):
 	LaunchPadX.OnMidiIn(event)
 
 def OnMidiMsg(event):
-	print('++++++++++++++++++++++ MIDI MSG +++++++++++++++++++++++++')
+	print('++++++++++++++++++++++ MIDI MSG +++++++++++++++++++++++++', event.data1)
 	LaunchPadX.OnMidiMsg(event)
 
 def OnMidiOutMsg(event):
@@ -1036,6 +1061,3 @@ def OnSysEx(event):
 
 def OnDirtyMixerTrack(index):
 	print('track:', index, ' has changed.')
-
-def OnUpdateLiveMode(lastTrack):
-	print('something changed in live mode:', lastTrack)
