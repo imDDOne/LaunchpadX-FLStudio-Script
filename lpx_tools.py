@@ -333,8 +333,10 @@ class LPX:
         return new_layout
 
         
-    # def process_pad(pad):
-    #     if pad == Pad_ID.SESSION:
+    def process_pad(pad_id):
+        if pad_id == Pad_ID.CAPTURE_MIDI:
+            stop_color = Led.STATIC + Pad_ID.CAPTURE_MIDI + Colors.CAPTURE_MIDI_STOP
+
 
 
 

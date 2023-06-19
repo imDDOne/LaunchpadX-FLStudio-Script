@@ -156,7 +156,7 @@ class TLaunchPadX():
 
 
 		self.is_mixerMode_enabled = False
-		self.is_performance_mode = False
+		self.is_performance_mode = playlist.getPerformanceModeState()
 		self.is_sessionMode_active = False
 		self.start_time = 0
 		
@@ -300,7 +300,7 @@ class TLaunchPadX():
 
 
 	def FixColor(self, Color):
-		print('\n\nFixColor func')
+		# print('\n\nFixColor func')
 		r, g, b = utils.ColorToRGB(Color)
 		r = self.ColScaleT[r]
 		g = self.ColScaleT[g]
@@ -364,7 +364,7 @@ class TLaunchPadX():
 				else:
 					lpx.recall_last_session()
 					print('back to last session')
-				self.is_sessionMode_active = True
+					self.is_sessionMode_active = True
 
 
 
@@ -388,7 +388,7 @@ class TLaunchPadX():
 			elif data == Btn_Note:
 				print('OnMidiMsg presssed Btn_Note')
 				self.is_sessionMode_active = False
-				self.CurSession = lpx_tools.Layout.NOTE_LAYOUT
+				self.CurSession = lpx_tools.Layout.NOTE
 				print('SESSION::::', self.CurSession)
 			elif data == Btn_Custom:
 				print('OnMidiMsg presssed Btn_Custom')
@@ -512,8 +512,8 @@ class TLaunchPadX():
 
 		elif (event.data1 == Btn_Left) | (event.data1 == Btn_Right): #------> performance clip offset
 			#print('\nOnMidiMsg - clipoofset L or R')
-			if event.data1 == Btn_Left and self.ClipOfsPerfomance <= 0:
-				return
+			# if event.data1 == Btn_Left and self.ClipOfsPerfomance <= 0:
+			# 	return
 
 			a = event.data1 - Btn_Left
 			event.handled = True
@@ -826,6 +826,8 @@ class TLaunchPadX():
 
 	def OnRefresh(self, flags):
 		print('\n\nOnRefresh func:', flags)
+		self.is_performance_mode = playlist.getPerformanceModeState()
+		print('-----====----peformance mode is:', playlist.getPerformanceModeState() == True)
 		if flags & midi.HW_Dirty_RemoteLinks != 0:
 			if self.ClipOfs < -1:
 				self.SetOfs(self.TrackOfs, self.ClipOfs)
