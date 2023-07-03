@@ -91,6 +91,8 @@ LPBlink2 = 2 << LPBlinkShift
 LPBlink3 = 3 << LPBlinkShift
 LPBlink4 = 4 << LPBlinkShift
 LPBlinkMask = 0xFF << LPBlinkShift
+faderChangedFromDAW = False
+initialTrack = mixer.trackNumber()
 
 lpx = lpx_tools.LPX()
 
@@ -336,33 +338,52 @@ class TLaunchPadX():
 
 	def OnMidiMsg(self, event):
 		print('OnMidiMsg func ---- READ MIDI INPUT')
-		# print ("controlNum: {}, \n controlVal: {}, \n data1: {}, \n data2: {}, \n handled:{}, \n inEv: {}, \n isIncrement: {}, \n midiChan: {}, \n midiChanEx:{}, \
-		#  \n midiId: {}, \n note: {}, \n outEv: {}, \n pitchBend:{}, \n pmeFlags: {}, \n port: {}, \n pressure:{}, \n progNum: {}, \n res: {}, \n senderId: {}, \
-		# 	  \n status:{}, \n sysex: {}, \n timestamp: {}, \n velocity: {}, \n write:{}".format(
-		# 	event.controlNum, event.controlVal, event.data1, event.data2, event.handled, event.inEv, event.isIncrement, event.midiChan, 
-		# 	event.midiChanEx, event.midiId, event.note, event.outEv, event.pitchBend, event.pmeFlags, event.port, event.pressure, event.progNum, 
-		# 	event.res, event.senderId, event.status, event.sysex, event.timestamp, event.velocity, event.write ))
+		print ("controlNum: {}, \n controlVal: {}, \n data1: {}, \n data2: {}, \n handled:{}, \n inEv: {}, \n isIncrement: {}, \n midiChan: {}, \n midiChanEx:{}, \
+		 \n midiId: {}, \n note: {}, \n outEv: {}, \n pitchBend:{}, \n pmeFlags: {}, \n port: {}, \n pressure:{}, \n progNum: {}, \n res: {}, \n senderId: {}, \
+			  \n status:{}, \n sysex: {}, \n timestamp: {}, \n velocity: {}, \n write:{}".format(
+			event.controlNum, event.controlVal, event.data1, event.data2, event.handled, event.inEv, event.isIncrement, event.midiChan, 
+			event.midiChanEx, event.midiId, event.note, event.outEv, event.pitchBend, event.pmeFlags, event.port, event.pressure, event.progNum, 
+			event.res, event.senderId, event.status, event.sysex, event.timestamp, event.velocity, event.write ))
 		data = event.data1
 		# print('presssed w event:',dir(event))
 		# print('presssed w data1:', data, '  -->', hex(data))
-		
+		global faderChangedFromDAW, initialTrack
+		# send data to DAW
+		if event.controlNum == 0:
+			mixer.setTrackVolume((mixer.trackNumber()), (event.controlVal / 127) )
+			faderChangedFromDAW = False
+		if event.controlNum == 1:
+			mixer.setTrackVolume((mixer.trackNumber() + 1), (event.controlVal / 127) ) 
+		if event.controlNum == 2:
+			mixer.setTrackVolume((mixer.trackNumber() + 2), (event.controlVal / 127) ) 
 		if event.data2 > 0:
 			self.start_time = time.time()
 		else:
+			print('-----------initial BEFORE:', initialTrack)
 			if data  == Btn_Up:
 				print('OnMidiMsg presssed Btn_Up')
 			elif data == Btn_Down:
 				print('OnMidiMsg presssed Btn_Down')
-			elif data == Btn_Left:
+			elif data == Btn_Left and initialTrack > 1:
+				event.handled = True
+				ui.previous()
+				initialTrack = initialTrack - 1
+				ui.miDisplayRect(mixer.trackNumber(),mixer.trackNumber()+7,1000)
+				print('-----------initial AFTER L:', initialTrack)
 				print('OnMidiMsg presssed Btn_Left')
-			elif data == Btn_Right:
+			elif data == Btn_Right and initialTrack+7 < 125:
+				event.handled = True
+				ui.next()
+				initialTrack = initialTrack + 1
+				ui.miDisplayRect(mixer.trackNumber(),mixer.trackNumber()+7,1000)
+				print('-----------initial AFTER R:', initialTrack)
 				print('OnMidiMsg presssed Btn_Right')
 			elif data == Btn_Session:
 				if self.is_sessionMode_active is True:
 					lpx.toggle_session(self.is_performance_mode)
 					print('+++toggled')
 				else:
-					lpx.recall_last_session()
+					lpx.recall_last_session(self.is_performance_mode)
 					print('back to last session')
 					self.is_sessionMode_active = True
 
@@ -400,31 +421,38 @@ class TLaunchPadX():
 				is_playing = transport.isPlaying()
 				is_recording = transport.isRecording()
 				is_double_click = device.isDoubleClick(data)
-					
+				capture_midi_pad = lpx.get_pad(lpx_tools.Pad_ID.CAPTURE_MIDI)
+				print('caputred pad: ', capture_midi_pad.name)
+
 				if interval < 0.5:
 					if is_double_click:
 						transport.stop()
-						device.midiOutSysex(bytes([0xB0, 98, 0x4F]))
+						# device.midiOutSysex(bytes([0xB0, 98, 0x4F]))
+						capture_midi_pad.trigger_state('idle')
 						print('stop')
 						print('============Btn_CapMidi is doubleckick:',is_double_click)
 						event.handled = True
 					else:
 						if is_playing:
 							print('pause:',is_playing)
-							device.midiOutSysex(bytes([0xB0, 98, 0x0D]))
+							# device.midiOutSysex(bytes([0xB0, 98, 0x0D]))
+							capture_midi_pad.trigger_state('double_click')
 						else:
 							print('play:',is_playing)
-							device.midiOutSysex(bytes([0xB0, 98, 0x57]))
+							# device.midiOutSysex(bytes([0xB0, 98, 0x57]))
+							capture_midi_pad.trigger_state('active')
 						transport.globalTransport(midi.FPT_Play, midi.PME_System, event.pmeFlags)
 						print('------------------>>>>> LESS THAN 1:',interval)
 						event.handled = True
 				else:
 					if is_recording:
 							print('stop record:',is_recording)
-							device.midiOutSysex(bytes([0xB0, 98, 0x57]))
+							# device.midiOutSysex(bytes([0xB0, 98, 0x57]))
+							capture_midi_pad.trigger_state('idle')
 					else:
 						print('record:',is_recording)
-						device.midiOutSysex(bytes([0xB0, 98, 0x48]))
+						# device.midiOutSysex(bytes([0xB0, 98, 0x48]))
+						capture_midi_pad.trigger_state('long_click')
 					transport.globalTransport(midi.FPT_Record, midi.PME_System, event.pmeFlags)
 					print('------------------>>>>> BIGGER THAN 1:',interval)
 					event.handled = True
@@ -435,14 +463,14 @@ class TLaunchPadX():
 			elif data == Btn_Volume:
 				print('============Btn_Volume is doubleckick:',device.isDoubleClick(data))
 				device.midiOutSysex(bytes([0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x01, 0x00, 0x00, 
-				0x00, 0x00, 0x07, 0x05,
-				0x01, 0x00, 0x08, 0x13, 
-				0x02, 0x00, 0x09, 0x21, 
-				0x03, 0x00, 0x10, 0x29,
-				0x04, 0x00, 0x11, 0x37, 
-				0x05, 0x00, 0x12, 0x45, 
-				0x06, 0x00, 0x13, 0x53, 
-				0x07, 0x00, 0x14, 0x61, 0xF7]))
+				0x00, 0x00, 0x00, 0x05,
+				0x01, 0x00, 0x01, 0x13, 
+				0x02, 0x00, 0x02, 0x21, 
+				0x03, 0x00, 0x03, 0x29,
+				0x04, 0x00, 0x04, 0x37, 
+				0x05, 0x00, 0x05, 0x45, 
+				0x06, 0x00, 0x06, 0x53, 
+				0x07, 0x00, 0x07, 0x61, 0xF7]))
 				event.handled = True
 				print('OnMidiMsg presssed Btn_Volume')
 			elif data == Btn_Pan:
@@ -512,8 +540,8 @@ class TLaunchPadX():
 
 		elif (event.data1 == Btn_Left) | (event.data1 == Btn_Right): #------> performance clip offset
 			#print('\nOnMidiMsg - clipoofset L or R')
-			# if event.data1 == Btn_Left and self.ClipOfsPerfomance <= 0:
-			# 	return
+			if event.data1 == Btn_Left and self.ClipOfsPerfomance <= 0:
+				return
 
 			a = event.data1 - Btn_Left
 			event.handled = True
@@ -845,6 +873,8 @@ class TLaunchPadX():
 		print('\n\nOnInit func')
 		NameStr = 'Novation Launchpad X v2'
 
+		lpx.initialise_pads()
+		
 		for n in range(0, len(self.ColScaleT)):
 			v = n / 255
 			self.ColScaleT[n] = min(round(v * v * v * 255 * 0.9), 63)
@@ -1032,7 +1062,8 @@ def OnMidiIn(event):
 	LaunchPadX.OnMidiIn(event)
 
 def OnMidiMsg(event):
-	print('++++++++++++++++++++++ MIDI MSG +++++++++++++++++++++++++', event.data1)
+	print('++++++++++++++++++++++ MIDI MSG +++++++++++++++++++++++++', event.data1, event.controlVal)
+	
 	LaunchPadX.OnMidiMsg(event)
 
 def OnMidiOutMsg(event):
@@ -1050,10 +1081,40 @@ def OnIdle():
 def OnRefresh(Flags):
 	print('FLAGS--->',Flags)
 	
-	print('TRACK VOL:',mixer.getTrackVolume(1))
-	trackVol = round(mixer.getTrackVolume(1) * 127)
-	device.midiOutMsg(180, 4, 7, trackVol)
-	LaunchPadX.OnRefresh(Flags)
+
+	trkVolume = (mixer.getTrackVolume(mixer.trackNumber()))
+	# mixer.setTrackVolume((mixer.trackNumber()), (trkVolume) ) 
+
+	print('TRACK VOL:',trkVolume)
+
+
+	# trackVol0 = round(mixer.getTrackVolume(mixer.trackNumber()) * 127)
+	# print('0 track:', mixer.getTrackVolume(mixer.trackNumber()), trackVol0 )
+	# device.midiOutMsg(180, 4, 0, trackVol0)
+
+
+	# trackVol1 = round(mixer.getTrackVolume(mixer.trackNumber() + 1) * 127)
+	# print('1 track:', trackVol1 )
+	# device.midiOutMsg(180, 4, 1, trackVol1)
+
+	# trackVol2 = round(mixer.getTrackVolume(mixer.trackNumber() + 2) * 127)
+	# device.midiOutMsg(180, 4, 2, trackVol2)
+
+	# trackVol3 = round(mixer.getTrackVolume(mixer.trackNumber() + 3) * 127)
+	# device.midiOutMsg(180, 4, 3, trackVol3)
+
+	# trackVol4 = round(mixer.getTrackVolume(mixer.trackNumber() + 4) * 127)
+	# device.midiOutMsg(180, 4, 4, trackVol4)
+
+	# trackVol5 = round(mixer.getTrackVolume(mixer.trackNumber() + 5) * 127)
+	# device.midiOutMsg(180, 4, 5, trackVol5)
+
+	# trackVol6 = round(mixer.getTrackVolume(mixer.trackNumber() + 6) * 127)
+	# device.midiOutMsg(180, 4, 6, trackVol6)
+
+	# trackVol7 = round(mixer.getTrackVolume(mixer.trackNumber() + 7) * 127)
+	# device.midiOutMsg(180, 4, 7, trackVol7)
+	# LaunchPadX.OnRefresh(Flags)
 
 def OnUpdateLiveMode(LastTrackNum):
 	LaunchPadX.OnUpdateLiveMode(LastTrackNum)
@@ -1062,4 +1123,33 @@ def OnSysEx(event):
 	LaunchPadX.OnSysEx(event)
 
 def OnDirtyMixerTrack(index):
+	global faderChangedFromDAW
+	# receive data from DAW
+	if faderChangedFromDAW == True:
+		trackVol0 = round(mixer.getTrackVolume(initialTrack) * 127)
+		print('0 track:', mixer.getTrackVolume(initialTrack), trackVol0 )
+		device.midiOutMsg(180, 4, 0, trackVol0)
+
+		trackVol1 = round(mixer.getTrackVolume(initialTrack + 1) * 127)
+		print('1 track:', trackVol1 )
+		device.midiOutMsg(180, 4, 1, trackVol1)
+
+		trackVol2 = round(mixer.getTrackVolume(initialTrack + 2) * 127)
+		device.midiOutMsg(180, 4, 2, trackVol2)
+
+		trackVol3 = round(mixer.getTrackVolume(initialTrack + 3) * 127)
+		device.midiOutMsg(180, 4, 3, trackVol3)
+
+		trackVol4 = round(mixer.getTrackVolume(initialTrack + 4) * 127)
+		device.midiOutMsg(180, 4, 4, trackVol4)
+
+		trackVol5 = round(mixer.getTrackVolume(initialTrack + 5) * 127)
+		device.midiOutMsg(180, 4, 5, trackVol5)
+
+		trackVol6 = round(mixer.getTrackVolume(initialTrack + 6) * 127)
+		device.midiOutMsg(180, 4, 6, trackVol6)
+
+		trackVol7 = round(mixer.getTrackVolume(initialTrack + 7) * 127)
+		device.midiOutMsg(180, 4, 7, trackVol7)
 	print('track:', index, ' has changed.')
+	faderChangedFromDAW = True
