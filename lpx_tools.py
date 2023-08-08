@@ -23,10 +23,10 @@ Mode = {
  
 class _SESSION(Enum):
     PERFORMANCE_LAYOUT = 1
-    CH_RACK_LAYOUT = 2
+    # CH_RACK_LAYOUT = 2
     MIXER = 3
-    PAGES = 4
-    CHORD_LAYOUT = 5
+    # PAGES = 4
+    # CHORD_LAYOUT = 5
 
 class Layout(Enum):
     NOTE = 0
@@ -219,8 +219,8 @@ class LPX:
         self.pads[Pad_ID.CUSTOM] = Pad(Pad_ID.CUSTOM)
         self.pads[Pad_ID.CAPTURE_MIDI] = Pad(Pad_ID.CAPTURE_MIDI, 'capture_midi', states={'idle': [176, 98, 79], 'active': [176, 98, 87], 'double_click' : [176, 98, 13], 'long_click' : [176, 98, 72] })
 
-        self.pads[Pad_ID.VOLUME] = Pad(Pad_ID.VOLUME, 'volume')
-        self.pads[Pad_ID.PAN] = Pad(Pad_ID.PAN, 'pan')
+        self.pads[Pad_ID.VOLUME] = Pad(Pad_ID.VOLUME, 'volume', states={'idle': [176, 89, 1], 'active': [176, 89, 21]})
+        self.pads[Pad_ID.PAN] = Pad(Pad_ID.PAN, 'pan', states={'idle': [176, 79, 1], 'active': [176, 79, 9]})
         self.pads[Pad_ID.SEND_A] = Pad(Pad_ID.SEND_A, 'send_a')
         self.pads[Pad_ID.SEND_B] = Pad(Pad_ID.SEND_B, 'send_b')
 
@@ -317,41 +317,42 @@ class LPX:
             print('______built performance')
             command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
             self.pads[Pad_ID.SESSION].trigger_state('session')
+        else:
+            # if layout == Layout.SESSION.value.CH_RACK_LAYOUT:
+            #     print('______built chrack')
+            #     command = self._build_command(Mode['SESSION_CH_RACK_MODE'])
+            #     self.pads[Pad_ID.SESSION].trigger_state('ch_rack')
 
-        elif layout == Layout.SESSION.value.CH_RACK_LAYOUT:
-            print('______built chrack')
-            command = self._build_command(Mode['SESSION_CH_RACK_MODE'])
-            self.pads[Pad_ID.SESSION].trigger_state('ch_rack')
+            if layout == Layout.SESSION.value.MIXER:
+                print('______built mixer')
+                command = self._build_command(Mode['VOLUME_MIXER_MODE'])
+                self.pads[Pad_ID.SESSION].trigger_state('mixer')
 
-        elif layout == Layout.SESSION.value.MIXER:
-            print('______built mixer')
-            command = self._build_command(Mode['VOLUME_MIXER_MODE'])
-            self.pads[Pad_ID.SESSION].trigger_state('mixer')
+            elif layout == Layout.SESSION.value.PAGES:
+                print('______built pages')
+                command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+                self.pads[Pad_ID.SESSION].trigger_state('pages')
 
-        elif layout == Layout.SESSION.value.PAGES:
-            print('______built pages')
-            command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
-            self.pads[Pad_ID.SESSION].trigger_state('pages')
+            elif layout == Layout.SESSION.value.CHORD_LAYOUT:
+                print('______built chord')
+                command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+                self.pads[Pad_ID.SESSION].trigger_state('chord')
 
-        elif layout == Layout.SESSION.value.CHORD_LAYOUT:
-            print('______built chord')
-            command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
-            self.pads[Pad_ID.SESSION].trigger_state('chord')
+            # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
+            #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
 
-        # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
-        #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+            # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
+            #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
 
-        # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
-        #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+            # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
+            #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
 
-        # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
-        #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+            # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
+            #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
 
-        # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
-        #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
-
-        # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
-        #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+            # elif layout == Layout.SESSION.value.PERFORMANCE_LAYOUT:
+            #     command = self._build_command(Mode['SESSION_PERFORMANCE_MODE'])
+            
         print('______built command:',command)
         self._execute_command(command)
 
