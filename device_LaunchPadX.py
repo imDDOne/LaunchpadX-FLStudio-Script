@@ -791,6 +791,72 @@ class TLaunchPadX():
 			print(f"DEBUG: Highlight Rect: {self.initialTrack} to {end_track}")
 			ui.miDisplayRect(self.initialTrack, end_track, 4000)
 
+			# 4. Update Navigation Button Feedback
+			self._update_nav_buttons_feedback()
+
+	# NEW: Dynamic Feedback for Navigation Buttons
+	def _update_nav_buttons_feedback(self):
+		"""
+		Updates the Left/Right navigation buttons with dynamic lighting based on
+		proximity to the start or end of the track list.
+		Colors: Bright Blue -> Mid Blue -> Dim Blue -> Base Blue
+		"""
+		# Color Constants (Launchpad Blue Palette)
+		NAV_COLOR_BRIGHT = 45 # Bright Blue
+		NAV_COLOR_MID = 46    # Mid Blue
+		NAV_COLOR_DIM = 47    # Dim Blue
+		NAV_COLOR_BASE = 103  # Very Dim Blue / Greyish
+
+		MAX_TRACKS = 125
+		WINDOW_SIZE = 8
+		
+		# --- Left Button (Proximity to Start) ---
+		dist_left = self.initialTrack - 1
+		if dist_left == 0:
+			col_left = NAV_COLOR_BRIGHT
+		elif dist_left == 1:
+			col_left = NAV_COLOR_MID
+		elif dist_left == 2:
+			col_left = NAV_COLOR_DIM
+		else:
+			col_left = NAV_COLOR_BASE
+			
+		# --- Right Button (Proximity to End) ---
+		# End limit is when the last track (initialTrack + 7) equals MAX_TRACKS
+		# So proximity is (MAX_TRACKS - 7) - initialTrack
+		limit_track = MAX_TRACKS - WINDOW_SIZE + 1
+		dist_right = limit_track - self.initialTrack
+		
+		# Logic inverted: we want it BRIGHT when AT the limit (cannot move further)?
+		# OR Bright when we CAN move?
+		# User request: "dimming amount... On the far left, the left button should be of a dark blue, the more away it moves away from the far-left it should dim"
+		# Use Interpretation:
+		# At Limit (Far Left): Brightest (Active/Reached).
+		# 1 step away: Mid.
+		# 2 steps away: Dim.
+		# >2 steps: Dimmest.
+		
+		if dist_right == 0:
+			col_right = NAV_COLOR_BRIGHT
+		elif dist_right == 1:
+			col_right = NAV_COLOR_MID
+		elif dist_right == 2:
+			col_right = NAV_COLOR_DIM
+		else:
+			col_right = NAV_COLOR_BASE
+
+		# Send MIDI updates
+		# Btn_Left = 93 (0x5D), Btn_Right = 94 (0x5E)
+		# CC messages on Channel 1 (or 0 in Python API?) - device.midiOutMsg uses 0-based channel
+		
+		# Note: Launchpad X Top/Side buttons are CCs.
+		# We use the specific CC numbers for direct control.
+		
+		# Left Button
+		device.midiOutMsg(0xB0, 0, Btn_Left, col_left)
+		# Right Button
+		device.midiOutMsg(0xB0, 0, Btn_Right, col_right)
+
 
 	# NEW: Handler for the Session button
 	def _handle_session_button(self, event):
@@ -1236,6 +1302,9 @@ class TLaunchPadX():
 				self.update_fader_feedback()
 				self.update_pan_feedback()
 			faderChangedFromDAW = True
+		
+		# Ensure nav buttons are correct on refresh
+		self._update_nav_buttons_feedback()
 
 		# Handle updates for custom remote control links
 		if flags & midi.HW_Dirty_RemoteLinks:
@@ -1316,6 +1385,7 @@ class TLaunchPadX():
 
 		# 7. Set the initial grid offset and display the zone in the playlist
 		self.set_grid_offset(self.track_offset, self.clip_offset)
+		self._update_nav_buttons_feedback() # Initialize nav lights
 		
 		print('OnInit: Initialization complete.')
 
