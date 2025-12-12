@@ -678,6 +678,24 @@ class TLaunchPadX():
 		global faderChangedFromDAW
 		faderChangedFromDAW = False
 
+	# NEW: Handler for Pan Faders
+	def _handle_pan_fader(self, event):
+		""" Handles pan fader input from the Launchpad X. """
+		# The fader index on the hardware is event.controlNum (8-15).
+		# The target mixer track is our dynamic bank start + the fader's index - 8.
+		track_index = self.initialTrack + (event.controlNum - 8)
+		
+		# Convert MIDI (0-127) to FL Studio Pan (-1.0 to 1.0)
+		# 0 -> -1.0, 64 -> ~0.0, 127 -> 1.0
+		pan_level = (event.controlVal / 127.0) * 2 - 1
+		
+		if 0 < track_index < mixer.trackCount():
+			mixer.setTrackPan(track_index, pan_level)
+
+		# Prevents an infinite feedback loop.
+		global faderChangedFromDAW
+		faderChangedFromDAW = False
+
 	# NEW: Handler for Pan Faders with corrected calculation
 	def update_fader_feedback(self):
 		"""
@@ -696,6 +714,28 @@ class TLaunchPadX():
 			# Send MIDI message to update the fader's LED on the Launchpad.
 			cc_number = i
 			device.midiOutMsg(status_byte, 0, cc_number, midi_volume)
+
+	# NEW: Feedback for Pan Faders
+	def update_pan_feedback(self):
+		"""
+		Updates the Pan faders on the Launchpad to match FL Studio's mixer values.
+		"""
+		status_byte = 0xB4 # CC message for faders on Channel 5
+
+		for i in range(8):
+			track_index = self.initialTrack + i
+			midi_pan = 64 # Default to center
+			if 0 <= track_index < mixer.trackCount():
+				# Get pan from FL Studio (-1.0 to 1.0) and convert to MIDI (0-127).
+				pan_level = mixer.getTrackPan(track_index)
+				# Map -1.0..1.0 to 0..127
+				midi_pan = round(((pan_level + 1) / 2) * 127)
+				midi_pan = utils.Limited(midi_pan, 0, 127)
+			
+			# Send MIDI message to update the fader's LED on the Launchpad.
+			# Pan faders are on CC 8-15 (implied from controlNum logic)
+			cc_number = i + 8
+			device.midiOutMsg(status_byte, 0, cc_number, midi_pan)
 
 	# NEW: Handler for Arrow Buttons (context-aware)
 	def _handle_arrow_buttons(self, event):
@@ -738,6 +778,7 @@ class TLaunchPadX():
 			
 			# 2. Update the fader LEDs on the Launchpad to show the new volume levels.
 			self.update_fader_feedback()
+			self.update_pan_feedback()
 			
 			# 3. THIS IS THE FIX: Draw the highlight rectangle in the mixer.
 			# It will highlight from the new starting track to the end of the 8-fader bank.
@@ -1186,6 +1227,7 @@ class TLaunchPadX():
 			global faderChangedFromDAW
 			if faderChangedFromDAW:
 				self.update_fader_feedback()
+				self.update_pan_feedback()
 			faderChangedFromDAW = True
 
 		# Handle updates for custom remote control links
