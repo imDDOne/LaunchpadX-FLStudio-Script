@@ -6,7 +6,7 @@ import device
 import transport
 import arrangement
 import general
-import launchMapPages
+
 import playlist
 import ui
 import midi
@@ -761,19 +761,10 @@ class TLaunchPadX():
 		
 		# The clip offset can be positive (for clips) or negative (for custom pages).
 		# launchMapPages.length() provides the number of available custom pages[2].
-		self.clip_offset = utils.Limited(clip_offset, -launchMapPages.length() - 1, 0x10000)
+		self.clip_offset = utils.Limited(clip_offset, 0, 0x10000)
 
 		# 2. Update UI and hardware state only if the device is assigned.
 		if device.isAssigned():
-			# 3. Handle updates based on the current mode (clip launching vs. custom pages).
-			if self.clip_offset < -1:
-				# If in a custom page, update the mapping. The page index is derived
-				# from the negative clip offset[2].
-				page_index = -self.clip_offset - 2
-				launchMapPages.updateMap(page_index)
-			else:
-				# If in clip launching mode, check if a hidden item needs to be re-evaluated.
-				launchMapPages.checkMapForHiddenItem()
 
 			# 4. Trigger a full refresh of the live mode grid LEDs.
 			self.update_performance_grid_leds(playlist.trackCount())
@@ -1221,19 +1212,7 @@ class TLaunchPadX():
 				return
 
 
-			if self.clip_offset < -1:
-				# custom pages
-				x2 = y * LayW + x
-				m = -self.clip_offset - 2
-				if x2 <= launchMapPages.getMapCount(m):
-					o = launchMapPages.getMapItemChannel(m, x2)
-					if o > -128:
-						m2 = event.data2
-						if (m2 == 0) & (self.virtual_button_states[VBTN_SCENEPLUS] > 0):
-							m2 = -MaxInt # user1=hold
-						launchMapPages.processMapItem(event, m, x2, m2)
-			
-			else: # PERFORMANCE TRIGGER
+			if True: # PERFORMANCE TRIGGER
 
 				if (event.pmeFlags & midi.PME_System_Safe != 0):
 					x2 = x
@@ -1593,10 +1572,8 @@ class TLaunchPadX():
 		Refreshes custom mapped pages when they are updated in FL Studio.
 		This corresponds to the original logic from the class's OnRefresh method.
 		"""
-		# A negative clip_offset value indicates a custom page is active.
-		if self.clip_offset < -1:
-			self.set_grid_offset(self.track_offset, self.clip_offset)
-			launchMapPages.updateMap(-1)
+		# Feature disabled in FL Studio 25 update
+		pass
 
 
 
@@ -1626,11 +1603,7 @@ class TLaunchPadX():
 			self._color_scaling_table[n] = min(round(v * v * v * 255 * 0.9), 127) # Launchpad X uses 7-bit color (0-127)
 
 		# 3. Initialize custom mapping pages
-		launchMapPages.createOverlayMap(1, 8, LayW, LayH)
-		for y in range(LayH):
-			for x in range(LayW):
-				# Map each grid pad to a target for custom pages
-				launchMapPages.setMapItemTarget(-1, y * LayW + x, y * PadsStride + x + 1)
+		# 3. Initialize custom mapping pages - DISABLED
 
 		# 4. Reset all internal states, button maps, and timers
 		self.Reset()
@@ -1732,18 +1705,14 @@ class TLaunchPadX():
 			return
 
 		# Check if the controller is in a mode that displays live clips or custom pages.
-		is_live_clip_or_overview_mode = (self.clip_offset >= -1) or (self.virtual_button_states[VBTN_OVERVIEW] > 0)
-
-		if is_live_clip_or_overview_mode:
+		# Always is_live_clip_or_overview_mode in simplified script
+		if True:
 			# When in Performance Mode (clip launching view)
 			if self.clip_offset >= 0:
 				self._update_performance_clips_grid(lastTrackNum)
 			# When in the track properties view (a specific custom layout)
 			else:
 				self._update_track_properties_grid(lastTrackNum)
-		else:
-			# When a custom mapping page is active
-			self._update_custom_pages_grid()
 
 		# Temporarily disable full refresh to allow idle-time animations (like activity meters)
 		# to be calculated before the final refresh is triggered.
@@ -1835,18 +1804,7 @@ class TLaunchPadX():
 				self.led_color_map[SClipsY + y - 1][SClipsX + x] = color
 
 
-	# NEW: Helper to update the grid when in a custom mapped page
-	def _update_custom_pages_grid(self):
-		"""
-		Updates the grid LEDs based on the colors defined in the currently active
-		custom mapping page (launchMapPages)[4].
-		"""
-		page_index = -self.clip_offset - 2
-		for y in range(LayH):
-			for x in range(LayW):
-				# Get the color from the custom page and apply the script's color correction
-				color = launchMapPages.getMapItemColor(page_index, y * LayW + x)
-				self.led_color_map[LayY + y][LayX + x] = self.convert_color_to_7bit(color)
+
 
 
 
