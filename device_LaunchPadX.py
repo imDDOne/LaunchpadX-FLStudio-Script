@@ -751,30 +751,33 @@ class TLaunchPadX():
 	# NEW: Mixer navigation logic
 	def _navigate_mixer(self, event):
 		"""
-		Navigates the FL Studio mixer in banks of 8 tracks and displays a
-		highlight rectangle around the active bank.
+		Navigates the FL Studio mixer using UI commands to ensure proper
+		window scrolling and highlighting. Moves 1 track at a time.
 		"""
 		bank_changed = False
 		
+		# Define the size of the window we are controlling
+		WINDOW_SIZE = 8
+		MAX_TRACKS = 125 # FL Studio generic limit
+
 		if event.data1 == Btn_Left:
-			# Move to the previous bank of 8, stopping at track 1.
-			new_track_start = max(1, self.initialTrack - 8)
-			if new_track_start != self.initialTrack:
-				self.initialTrack = new_track_start
+			# Use UI command to move selection left
+			if self.initialTrack > 1:
+				ui.previous()
+				self.initialTrack -= 1
 				bank_changed = True
 
 		elif event.data1 == Btn_Right:
-			# Move to the next bank of 8, ensuring the bank stays within valid track limits.
-			# FL Studio has 125 mixer tracks.
-			new_track_start = min(self.initialTrack + 8, 125 - 7)
-			if new_track_start != self.initialTrack:
-				self.initialTrack = new_track_start
+			# Use UI command to move selection right
+			# Ensure we don't go past the point where we can't show a full 8-track window
+			if self.initialTrack < MAX_TRACKS - WINDOW_SIZE + 1:
+				ui.next()
+				self.initialTrack += 1
 				bank_changed = True
 
 		# If the bank was changed by pressing an arrow key...
 		if bank_changed:
-			# 1. Select the first track of the new bank in FL Studio's UI.
-			mixer.setTrackNumber(self.initialTrack, midi.ROUTE_None)
+			# Note: mixer.setTrackNumber is REMOVED as ui.previous/next handles selection
 			
 			# 2. Update the fader LEDs on the Launchpad to show the new volume levels.
 			self.update_fader_feedback()
@@ -782,7 +785,11 @@ class TLaunchPadX():
 			
 			# 3. THIS IS THE FIX: Draw the highlight rectangle in the mixer.
 			# It will highlight from the new starting track to the end of the 8-fader bank.
-			ui.miDisplayRect(self.initialTrack, self.initialTrack + 7, 1000)
+			# Force focus to mixer to ensure painting works
+			ui.setFocused(midi.widMixer)
+			end_track = self.initialTrack + WINDOW_SIZE - 1
+			print(f"DEBUG: Highlight Rect: {self.initialTrack} to {end_track}")
+			ui.miDisplayRect(self.initialTrack, end_track, 4000)
 
 
 	# NEW: Handler for the Session button
